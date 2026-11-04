@@ -14,7 +14,13 @@ from site_forecast_app.adjuster import (
     zero_out_night_time_for_pv,
 )
 
-now = pd.Timestamp.now().floor("15min") + pd.Timedelta(minutes=1)
+
+@pytest.fixture(autouse=True)
+def freeze_adjuster_time(init_timestamp):
+    """Keep fixture setup and tests on the same clock as their shared data."""
+    with freeze_time(init_timestamp + pd.Timedelta(minutes=1)):
+        yield
+
 
 def test_get_me_values_no_values(db_session, sites):
     """Check no ME results are found with no forecast or generation values"""
@@ -24,7 +30,6 @@ def test_get_me_values_no_values(db_session, sites):
     assert len(me_df) == 0
 
 
-@freeze_time(now)
 def test_get_me_values(db_session, sites, generation_db_values, forecasts, init_timestamp):  # noqa: ARG001
     """Check ME results are found"""
 
@@ -39,7 +44,6 @@ def test_get_me_values(db_session, sites, generation_db_values, forecasts, init_
     assert me_df["me_kw"][90] != 0
 
 
-@freeze_time(now)
 def test_get_me_values_15(db_session, sites, generation_db_values, forecasts, init_timestamp):  # noqa: ARG001
     """Check ME results are found"""
 
@@ -88,7 +92,6 @@ def test_get_me_values_no_forecasts(db_session, sites, generation_db_values, ini
     assert len(me_df) == 0
 
 
-@freeze_time(now)
 @patch("site_forecast_app.adjuster.get_me_values")
 def test_adjust_forecast_with_adjuster(mock_get_me_values, db_session, sites):
     """Check forecast gets adjuster"""
